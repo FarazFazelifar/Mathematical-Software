@@ -1,0 +1,82 @@
+\chapter{مبانی ریاضی و الگوریتم‌های بهینه‌سازی}
+\label{chap:methods}
+
+در این فصل، ابتدا مکانیزم توجه از دیدگاه ریاضی تحلیل می‌شود. سپس حافظه نهان KV و الگوریتم‌های بهینه‌سازی آن معرفی می‌گردند.
+
+\section{مکانیزم توجه ضرب‌نقطه‌ای مقیاس‌یافته}
+قلب معماری ترنسفورمر، مکانیزم توجه ضرب‌نقطه‌ای مقیاس‌یافته\footnote{\lr{Scaled Dot-Product Attention}} است \cite{vaswani2017attention}. برای یک دنباله از $n$ توکن ورودی، ماتریس‌های \lr{Query ($Q$)}، \lr{Key ($K$)} و \lr{Value ($V$)} از طریق ضرب خطی در بردارهای تعبیه\footnote{\lr{Embedding}} محاسبه می‌شوند.
+\begin{align}
+\label{eq:attention}
+\text{Attention}(Q, K, V) &= \text{softmax}\left(\frac{Q K^\top}{\sqrt{d_k}}\right) V \\[4pt]
+Q &= X W_Q,\quad K = X W_K,\quad V = X W_V
+\end{align}
+که در آن $X \in \mathbb{R}^{n \times d}$ ماتریس ورودی، $d_k$ بعد بردارهای Key، و $W_Q, W_K, W_V \in \mathbb{R}^{d \times d_k}$ ماتریس‌های وزن هستند. پیچیدگی زمانی این عملیات $O(n^2 d_k)$ و پیچیدگی حافظه‌ای $O(n^2 + n d_k)$ است.
+
+\subsection{توجه چندسری}
+در عمل، مدل‌ها از $h$ سر توجه موازی استفاده می‌کنند که هر سر روی یک زیرفضای متفاوت از نمایش‌ها تمرکز می‌کند.
+\begin{equation}
+\label{eq:mha}
+\text{MHA}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h) W_O
+\end{equation}
+که $\text{head}_i = \text{Attention}(X W_{Q_i}, X W_{K_i}, X W_{V_i})$ و $W_O \in \mathbb{R}^{h d_k \times d}$ است. هر سر دارای ابعاد $d_k = d/h$ است.
+
+\section{حافظه نهان KV}
+در مرحله استنتاج خودرگرسیو\footnote{\lr{Decoding}}، مدل توکن‌ها را یک‌به‌یک تولید می‌کند. در گام $t$، تنها سطر $t$-ام ماتریس‌های $Q_t$, $K_t$, $V_t$ محاسبه می‌شود. با این حال، توجه به تمام $t$ توکن قبلی نیاز دارد.
+\begin{equation}
+\label{eq:kv_cache}
+\text{Attention}(Q_t, K_{1:t}, V_{1:t}) = \text{softmax}\left(\frac{Q_t K_{1:t}^\top}{\sqrt{d_k}}\right) V_{1:t}
+\end{equation}
+برای جلوگیری از محاسبه مجدد $K_{1:t-1}$ و $V_{1:t-1}$ در هر گام، آن‌ها در حافظه نهان ذخیره می‌شوند. اندازه این حافظه برای مدل‌های بزرگ به‌صورت بحرانی رشد می‌کند \cite{pope2023efficiently}.
+\begin{equation}
+\label{eq:kv_growth}
+S_{\text{KV}} = 2 \cdot n_{\text{لایه}} \cdot n_{\text{سر}} \cdot d_{\text{سر}} \cdot L \cdot b
+\end{equation}
+که $L$ طول دنباله و $b$ بایت‌های هر عنصر است.
+
+\section{الگوریتم‌های بهینه‌سازی حافظه‌نهان KV}
+
+\subsection{توجه چندسری گروهی}
+در روش Multi-Head Attention استاندارد، هر سر Query دارای سرهای Key/Value مجزاست. روش توجه چندسری \lr{(Multi-Query Attention (MQA, \cite{shazeer2019fast}))} از یک سر KV مشترک برای همه سرهای Query استفاده می‌کند. روش توجه چندسری گروهی\footnote{\lr{Grouped-Query Attention (GQA)}} \cite{ainslie2023gqa} که در مدل‌هایی مانند \lr{LLaMA-4} و \lr{DeepSeek-V5} به کار رفته، تعمیم‌یافته MQA است و تعداد سرهای KV را کاهش می‌دهد.
+\begin{equation}
+\label{eq:gqa}
+n_{\text{سر}}^{\text{KV}} = \frac{n_{\text{سر}}^{\text{Q}}}{g}
+\end{equation}
+که $g$ اندازه گروه است. با $g=8$، حافظه نهان KV به $\frac{1}{8}$ کاهش می‌یابد.
+
+\subsection{PagedAttention}
+الگوریتم PagedAttention که در سیستم vLLM پیاده‌سازی شده \cite{kwon2023efficient}، حافظه نهان KV را به‌صورت بلوک‌های صفحه‌بندی شده\footnote{\lr{Paged}} مدیریت می‌کند. این روش از تکنیک صفحه‌بندی حافظه مجازی\footnote{\lr{Virtual Memory Paging}} الهام گرفته است. برخلاف حافظه نهان سنتی که پیوسته\footnote{\lr{Contiguous}} تخصیص می‌یابد، PagedAttention بلوک‌ها را در صفحات مجازی غیرپیوسته ذخیره می‌کند.
+\begin{align}
+\text{\RTL{حافظه سنتی: }} M_{\text{سنتی}} &= B \cdot L \cdot S_{\text{سر}} \quad \text{\RTL{(تخصیص پیشین)}} \nonumber \\[4pt]
+\text{PagedAttention: } M_{\text{صفحه‌ای}} &= \sum_{i=1}^{k} B_i  \quad \text{\RTL{(تخصیص تنبل)}}
+\end{align}
+این روش تکه‌تکه شدن حافظه\footnote{\lr{Fragmentation}} را کاهش داده و استفاده از حافظه را تا ۴ برابر بهبود می‌بخشد.
+
+\subsection{FlashAttention}
+FlashAttention \cite{dao2022flashattention} یک الگوریتم دقیق توجه است که محاسبات را با استفاده از کاشی‌کاری\footnote{\lr{Tiling}} و بازمحاسبه\footnote{\lr{Recomputation}} بهینه می‌کند. ایده اصلی جلوگیری از ماندن ماتریس توجه $S = QK^\top$ در حافظه پرسرعت\footnote{\lr{HBM}} و پردازش آن در حافظه محلی\footnote{\lr{SRAM}} است. این روش حافظه مصرفی را از $O(n^2)$ به $O(n)$ کاهش می‌دهد.
+
+\subsection{شبه‌کد مدیریت حافظه نهان KV}
+\begin{latin}
+\begin{algorithm}[H]
+\caption{مدیریت حافظه نهان KV با تخصیص صفحه‌بندی شده}
+\label{alg:kv_cache}
+\begin{algorithmic}[1]
+\Require $n$: تعداد لایه‌ها، $h$: تعداد سرها، $d_k$: بعد هر سر
+\State $\text{KV\_Cache} \gets \text{empty\_dict}()$
+\State $\text{block\_table} \gets \text{empty\_list}()$
+\While{تولید توکن جدید}
+    \State $\text{token} \gets \text{sample}(\text{logits})$
+    \State $x \gets \text{embed}(\text{token})$
+    \For{$\text{layer} = 1$ \textbf{to} $n$}
+        \State $k, v \gets \text{compute\_kv}(x)$
+        \If{$\text{len}(\text{KV\_Cache}[\text{layer}]) \bmod \text{BLOCK\_SIZE} = 0$}
+            \State $\text{block\_id} \gets \text{alloc\_page}()$
+            \State $\text{store\_in\_page}(\text{KV\_Cache}[\text{layer}], \text{block\_id})$
+        \EndIf
+        \State $\text{append}(\text{KV\_Cache}[\text{layer}], [k, v])$
+        \State $x \gets \text{forward\_layer}(x, \text{KV\_Cache}[\text{layer}])$
+    \EndFor
+\EndWhile
+\Return KV\_Cache
+\end{algorithmic}
+\end{algorithm}
+\end{latin}

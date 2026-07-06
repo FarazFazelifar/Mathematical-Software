@@ -1,0 +1,111 @@
+\chapter{پیاده‌سازی و تحلیل}
+\label{chap:implementation}
+
+در این فصل، الگوریتم‌های بهینه‌سازی حافظه نهان KV که در \Cref{chap:methods} معرفی شدند، از نظر پیچیدگی محاسباتی و حافظه‌ای تحلیل می‌شوند و نتایج مقایسه به‌صورت گرافیکی نمایش داده می‌شوند.
+
+\section{تحلیل پیچیدگی حافظه و محاسبات}
+برای مقایسه روش‌های مختلف، یک مدل مرجع با پارامترهای زیر در نظر می‌گیریم: $n_{\text{لایه}} = 80$، $n_{\text{سر}} = 64$، $d = 8192$، $d_k = 128$ و $L = 32768$ توکن (مشابه مقیاس \lr{Claude Opus 4.8}). \Cref{fig:memory_comparison} میزان مصرف حافظه هر روش را نشان می‌دهد.
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}[b]{0.47\textwidth}
+\centering
+\begin{tikzpicture}[scale=0.65, every node/.style={font=\small}]
+\draw[->, thick] (0,0) -- (7.5,0) node[right] {$L$ (طول زمینه)};
+\draw[->, thick] (0,0) -- (0,5.5) node[above] {حافظه \lr{(GB)}};
+\draw[thick, blue] plot coordinates {(0.5,0.25) (1.5,0.5) (2.5,0.8) (3.5,1.1) (4.5,1.5) (5.5,2.0) (6.5,2.6)};
+\draw[thick, red, dashed] plot coordinates {(0.5,0.03) (1.5,0.07) (2.5,0.13) (3.5,0.18) (4.5,0.25) (5.5,0.34) (6.5,0.45)};
+\draw[thick, green!50!black, dotted] plot coordinates {(0.5,0.015) (1.5,0.03) (2.5,0.06) (3.5,0.08) (4.5,0.12) (5.5,0.16) (6.5,0.22)};
+\draw[thick, orange, dashdotted] plot coordinates {(0.5,0.06) (1.5,0.12) (2.5,0.20) (3.5,0.28) (4.5,0.38) (5.5,0.50) (6.5,0.65)};
+\draw[blue, thick] (5.8,4.8) -- (6.8,4.8) node[right] {MHA};
+\draw[red, dashed, thick] (5.8,4.3) -- (6.8,4.3) node[right] {GQA};
+\draw[green!50!black, dotted, thick] (5.8,3.8) -- (6.8,3.8) node[right] {MQA};
+\draw[orange, dashdotted, thick] (5.8,3.3) -- (6.8,3.3) node[right] {PagedAttn};
+\draw (1,0.1) -- (1,-0.1) node[below] {2K};
+\draw (3,0.1) -- (3,-0.1) node[below] {4K};
+\draw (5,0.1) -- (5,-0.1) node[below] {6K};
+\draw (7,0.1) -- (7,-0.1) node[below] {8K};
+\draw (-0.1,1) -- (0.1,1) node[left] {1};
+\draw (-0.1,2) -- (0.1,2) node[left] {2};
+\draw (-0.1,3) -- (0.1,3) node[left] {3};
+\end{tikzpicture}
+\caption{مقایسه مصرف حافظه KV Cache}
+\label{subfig:memory}
+\end{subfigure}
+\hspace{0.3cm}
+\begin{subfigure}[b]{0.47\textwidth}
+\centering
+\begin{tikzpicture}[scale=0.65, every node/.style={font=\small}]
+\draw[->, thick] (0,0) -- (7.5,0) node[right] {$L$};
+\draw[->, thick] (0,0) -- (0,5.5) node[above] {سرعت (توکن/ثانیه)};
+\draw[thick, blue] plot coordinates {(0.5,5.0) (1.5,4.7) (2.5,4.2) (3.5,3.5) (4.5,2.5) (5.5,1.5) (6.5,0.5)};
+\draw[thick, red, dashed] plot coordinates {(0.5,5.1) (1.5,5.0) (2.5,4.9) (3.5,4.7) (4.5,4.5) (5.5,4.2) (6.5,3.8)};
+\draw[thick, green!50!black, dotted] plot coordinates {(0.5,5.1) (1.5,5.05) (2.5,5.0) (3.5,4.95) (4.5,4.9) (5.5,4.85) (6.5,4.8)};
+\draw[thick, orange, dashdotted] plot coordinates {(0.5,5.0) (1.5,4.9) (2.5,4.7) (3.5,4.5) (4.5,4.2) (5.5,3.9) (6.5,3.5)};
+\draw[blue, thick] (5.8,4.8) -- (6.8,4.8) node[right] {MHA};
+\draw[red, dashed, thick] (5.8,4.3) -- (6.8,4.3) node[right] {GQA};
+\draw[green!50!black, dotted, thick] (5.8,3.8) -- (6.8,3.8) node[right] {MQA};
+\draw[orange, dashdotted, thick] (5.8,3.3) -- (6.8,3.3) node[right] {PagedAttn};
+\draw (1,0.1) -- (1,-0.1) node[below] {2K};
+\draw (3,0.1) -- (3,-0.1) node[below] {4K};
+\draw (5,0.1) -- (5,-0.1) node[below] {6K};
+\draw (7,0.1) -- (7,-0.1) node[below] {8K};
+\draw (-0.1,1) -- (0.1,1) node[left] {1};
+\draw (-0.1,3) -- (0.1,3) node[left] {3};
+\draw (-0.1,5) -- (0.1,5) node[left] {5};
+\end{tikzpicture}
+\caption{تأثیر طول زمینه بر سرعت استنتاج}
+\label{subfig:throughput}
+\end{subfigure}
+\caption{تحلیل عملکرد روش‌های مختلف بهینه‌سازی حافظه نهان KV. \Cref{subfig:memory} میزان مصرف حافظه و \Cref{subfig:throughput} توان عملیاتی استنتاج را نشان می‌دهد.}
+\label{fig:memory_comparison}
+\end{figure}
+
+\section{فلوچارت فرایند استنتاج با حافظه نهان KV}
+در \Cref{fig:flowchart}، فلوچارت کامل فرایند استنتاج خودرگرسیو با مدیریت حافظه نهان صفحه‌بندی شده \lr{(مطابق \Cref{alg:kv_cache})} رسم شده است. خطوط فقط از حاشیه گره‌ها عبور می‌کنند و از مرکز هر گره شروع یا ختم می‌شوند.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  node distance=1cm,
+  every node/.style={font=\small},
+  startstop/.style={rectangle, rounded corners, minimum width=2.8cm, minimum height=0.7cm, draw=black, fill=red!20, inner sep=2pt},
+  io/.style={trapezium, trapezium left angle=70, trapezium right angle=110, minimum width=2.8cm, minimum height=0.7cm, draw=black, fill=blue!20, inner sep=2pt},
+  process/.style={rectangle, minimum width=2.8cm, minimum height=0.7cm, draw=black, fill=orange!20, inner sep=2pt},
+  decision/.style={diamond, minimum width=2cm, minimum height=1.5cm, draw=black, fill=green!20, aspect=2, inner sep=1pt},
+  arrow/.style={thick, ->, >=stealth}
+]
+
+\node (start) [startstop] {شروع استنتاج};
+\node (prompt) [io, below of=start] {دریافت پرامپت};
+\node (encode) [process, below of=prompt] {رمزگذاری};
+\node (prefill) [process, below of=encode] {Prefill: محاسبه KV};
+\node (cache1) [process, below of=prefill] {ذخیره KV Cache};
+\node (decode) [decision, below of=cache1, yshift=-0.8cm] {توکن بعد؟};
+\node (pred) [process, right of=decode, xshift=4.5cm] {پیش‌بینی توکن};
+\node (cache2) [process, below of=pred] {محاسبه $K_t$, $V_t$};
+\node (page) [process, below of=cache2] {تخصیص صفحه؟};
+\node (append) [process, below of=page] {افزودن به Cache};
+\node (output) [io, below of=append] {خروجی توکن};
+\node (end) [startstop, below of=output] {پایان};
+
+\draw[arrow] (start.south) -- (prompt.north);
+\draw[arrow] (prompt.south) -- (encode.north);
+\draw[arrow] (encode.south) -- (prefill.north);
+\draw[arrow] (prefill.south) -- (cache1.north);
+\draw[arrow] (cache1.south) -- (decode.north);
+\draw[arrow] (decode.east) -- node[above] {بله} (pred.west);
+\draw[arrow] (pred.south) -- (cache2.north);
+\draw[arrow] (cache2.south) -- (page.north);
+\draw[arrow] (page.south) -- (append.north);
+\draw[arrow] (append.south) -- (output.north);
+\draw[arrow] (output.west) -- ++(-1.5cm,0) |- (decode.west) node[pos=0.25, above] {حلقه};
+\draw[arrow] (decode.south) -- node[right] {خیر} (end.north);
+
+\end{tikzpicture}
+\caption{فلوچارت فرایند استنتاج خودرگرسیو با مدیریت حافظه نهان KV صفحه‌بندی شده}
+\label{fig:flowchart}
+\end{figure}
+
+\section{تحلیل پیچیدگی الگوریتم‌ها}
+در این بخش، پیچیدگی محاسباتی و حافظه‌ای هر روش به‌صورت تحلیلی مقایسه می‌شود. جدول جامع مقایسه در \Cref{tab:comparison} در \Cref{chap:tables} ارائه شده است.

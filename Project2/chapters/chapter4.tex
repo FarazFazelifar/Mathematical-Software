@@ -1,0 +1,85 @@
+\chapter{فرمول‌ها و جداول تحلیلی}
+\label{chap:tables}
+
+در این فصل، فرمول‌های مهم مرتبط با تحلیل حافظه و کارایی الگوریتم‌های بهینه‌سازی KV Cache ارائه شده و یک جدول با قالب‌بندی مخصوص طراحی می‌شود \cite{dao2022flashattention, kwon2023efficient}.
+
+\section{فرمول‌های ریاضی}
+
+\subsection{فرمول طولانی: تحلیل حافظه KV Cache}
+فرمول زیر نشان‌دهنده تجزیه حافظه مصرفی KV Cache در یک مدل ترنسفورمر با $n_l$ لایه، $h$ سر توجه و طول زمینه $L$ است \cite{pope2023efficiently}.
+
+\begin{align}
+\label{eq:long_memory}
+M_{\text{total}} &= \sum_{i=1}^{n_l} \Bigg( \underbrace{2 \cdot h \cdot d_k \cdot L \cdot b}_{\text{\RTL{حافظه نهان KV}}} + \underbrace{2 \cdot d \cdot d_k \cdot h}_{\text{\RTL{وزن‌های پروجکشن}}} \Bigg) \nonumber \\[4pt]
+&= 2 n_l h d_k L b + 2 n_l d d_k h \nonumber \\[4pt]
+&= 2 n_l h d_k \left( L b + d \right) \nonumber \\[4pt]
+&\approx 2 n_l h d_k L b \quad \text{\RTL{(برای $L \gg d$)}}
+\end{align}
+
+که در آن $b$ اندازه نوع داده (مثلاً ۲ بایت برای \lr{FP16})، $d$ بعد مخفی مدل، $d_k = d/h$ بعد هر سر توجه، و $n_l$ تعداد لایه‌ها است. برای مدل \lr{LLaMA-4 70B} با $n_l = 80$، $d = 8192$ و $L = 32768$، حافظه نهان KV حدود $80 \times 2 \times 8192 \times 32768 \times 2 \approx 85.9$ گیگابایت است.
+
+\subsection{فرمول چندضابطه‌ای: نسبت صرفه‌جویی حافظه}
+تابع زیر نسبت حافظه ذخیره شده در روش‌های مختلف بهینه‌سازی را نسبت به MHA استاندارد نشان می‌دهد.
+
+\begin{equation}
+\label{eq:piecewise_savings}
+R(g) =
+\begin{cases}
+1 - \dfrac{1}{g}, & \text{GQA با گروه $g$} \\[10pt]
+1 - \dfrac{1}{h}, & \text{MQA (تک سر \lr{KV})} \\[10pt]
+1 - \dfrac{B \cdot L \cdot S_{\text{سر}} - \sum_{i=1}^{k} B_i}{B \cdot L \cdot S_{\text{سر}}}, & \text{PagedAttention}
+\end{cases}
+\end{equation}
+
+که در آن $h$ تعداد سرها، $g$ اندازه گروه در GQA، $B$ اندازه دسته، $L$ طول زمینه، $S_{\text{سر}}$ اندازه هر سر، و $B_i$ اندازه بلوک‌های تخصیص یافته است. برای $h=32$ و $g=8$، روش GQA حدود $87.5\%$ و روش MQA حدود $96.9\%$ صرفه‌جویی حافظه نسبت به MHA دارد.
+
+\subsection{فرمول سوم: بهره‌وری حافظه در PagedAttention}
+یک معیار کلیدی در ارزیابی الگوریتم‌های مدیریت حافظه نهان، بهره‌وری حافظه\footnote{\lr{Memory Utilization}} است \cite{kwon2023efficient}.
+
+\begin{equation}
+\label{eq:utilization}
+\eta = \frac{\sum_{j=1}^{N_{\text{seq}}} L_j \cdot S_{\text{سر}}}{P_{\text{مجموع}} \cdot \text{BLOCK\_SIZE} \cdot S_{\text{سر}}}
+= \frac{\sum_{j=1}^{N_{\text{seq}}} L_j}{P_{\text{مجموع}} \cdot \text{BLOCK\_SIZE}}
+\end{equation}
+
+که در آن $N_{\text{seq}}$ تعداد دنباله‌های هم‌زمان، $L_j$ طول دنباله $j$، $P_{\text{مجموع}}$ تعداد کل صفحات تخصیص یافته، و BLOCK\_SIZE اندازه هر صفحه است. در روش سنتی با تخصیص پیشین\footnote{\lr{Pre-allocation}}، $P_{\text{مجموع}} = N_{\text{seq}} \cdot \lceil L_{\max} / \text{BLOCK\_SIZE} \rceil$ است که باعث $\eta \ll 1$ می‌شود. در PagedAttention با تخصیص تنبل\footnote{\lr{Lazy Allocation}}، $P_{\text{مجموع}} \approx \sum \lceil L_j / \text{BLOCK\_SIZE} \rceil$ بوده و $\eta \to 1$ نزدیک می‌شود.
+
+همان‌طور که در \Cref{eq:long_memory} مشاهده شد، حافظه مصرفی KV Cache با طول زمینه به‌صورت خطی رشد می‌کند. \Cref{eq:piecewise_savings} میزان صرفه‌جویی هر روش را نشان می‌دهد و \Cref{eq:utilization} اهمیت تخصیص تنبل حافظه را کمی می‌کند.
+
+\section{جدول فرمت‌بندی شده: مقایسه جامع روش‌ها}
+در \Cref{tab:comparison} مقایسه‌ای جامع بین روش‌های مختلف بهینه‌سازی حافظه نهان KV انجام شده است. این جدول شامل خط ضخیم در هدر، خط رنگی در ستون سمت راست، رنگ پس‌زمینه یک‌درمیان، و ابعاد مشخص سلول‌ها می‌باشد.
+
+\begin{table}[ht]
+\centering
+\caption{مقایسه جامع روش‌های بهینه‌سازی حافظه نهان KV}
+\label{tab:comparison}
+\renewcommand{\arraystretch}{1.5}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{
+  >{\centering\arraybackslash}p{2.7cm}
+  !{\color{thickblue}\vrule width 1.5pt}
+  >{\centering\arraybackslash}p{2.7cm}
+  >{\centering\arraybackslash}p{2.7cm}
+  >{\centering\arraybackslash}p{2.7cm}
+}
+\hline
+\rowcolor{lightblue}
+\textbf{روش} & \textbf{پیچیدگی حافظه} & \textbf{کاهش حافظه} & \textbf{کاهش دقت} \\
+\Xhline{2pt}
+\rowcolor{white}
+MHA & $O(n_l h d L)$ & $1\times$ & هیچ \\
+\hline
+\rowcolor{lightblue}
+GQA & $O\left(\dfrac{n_l h d L}{g}\right)$ & $g\times$ & جزئی \lr{($<0.5\%$)} \\
+\hline
+\rowcolor{white}
+MQA & $O\left(\dfrac{n_l h d L}{h}\right)$ & $h\times$ & محسوس \lr{($\sim 1\%$)} \\
+\hline
+\rowcolor{lightblue}
+PagedAttention & $O\left(\dfrac{n_l h d L}{\eta}\right)$ & $4\times$ & هیچ \\
+\hline
+\rowcolor{white}
+FlashAttention & $O(n_l h d L)$ & $2\times$ & هیچ \\
+\hline
+\end{tabular}
+\end{table}

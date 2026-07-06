@@ -1,0 +1,44 @@
+\chapter{مقدمه}
+\label{chap:intro}
+
+مدل‌های زبانی بزرگ\footnote{\lr{Large Language Models (LLMs)}} مانند \lr{Claude Opus 4.8}، \lr{GPT-5}، \lr{Gemini 3} و \lr{DeepSeek-V5} انقلابی در پردازش زبان طبیعی ایجاد کرده‌اند. این مدل‌ها بر پایه معماری ترنسفورمر\footnote{\lr{Transformer}} ساخته شده‌اند که از مکانیزم توجه\footnote{\lr{Attention}} برای مدل‌سازی وابستگی‌های طولانی در متن استفاده می‌کند \cite{vaswani2017attention}. با افزایش اندازه مدل‌ها و طول متن ورودی، چالش‌های جدیدی در زمینه حافظه و سرعت استنتاج پدید آمده است.
+
+\section{مسئله طول زمینه در LLMها}
+یکی از مهم‌ترین محدودیت‌های LLMها، طول زمینه\footnote{\lr{Context Length}} است. مدل‌های اولیه مانند GPT-3 تنها قادر به پردازش ۲۰۴۸ توکن بودند، اما مدل‌های جدید مانند \lr{Claude Opus 4.8} از ۱M توکن، \lr{GPT-5} از ۲M توکن و \lr{Gemini 3} از ۲M توکن پشتیبانی می‌کنند \cite{child2019generating}. افزایش طول زمینه باعث رشد quadratically حافظه مصرفی در مکانیزم توجه می‌شود که بزرگترین تنگنای استنتاج محسوب می‌شود.
+
+\section{حافظه نهان KV}
+در استنتاج خودرگرسیو\footnote{\lr{Auto-regressive Decoding}}، مدل به‌صورت توکن‌به‌توکن خروجی تولید می‌کند. در هر گام، ماتریس‌های \lr{Key ($K$)} و \lr{Value ($V$)} برای توکن جدید محاسبه می‌شوند. برای جلوگیری از محاسبه مجدد این مقادیر برای تمام گام‌های قبلی، آن‌ها در حافظه نهان KV\footnote{\lr{KV Cache}} ذخیره می‌شوند. اندازه این حافظه نهان با افزایش طول زمینه به سرعت رشد می‌کند \cite{pope2023efficiently}.
+\begin{equation}
+\label{eq:cache_size}
+M_{\text{KV}} = 2 \times N_{\text{لایه}} \times N_{\text{سر}} \times d_{\text{سر}} \times L_{\text{زمینه}} \times b
+\end{equation}
+که در آن $b$ اندازه نوع داده (مثلاً ۲ بایت برای \lr{FP16}) است.
+
+\section{اهمیت بهینه‌سازی}
+برای یک مدل ۷۰ میلیارد پارامتری با ۸۰ لایه و طول زمینه ۱۲۸K، حافظه نهان KV به حدود $80 \times 8 \times 128 \times 131072 \times 2 \approx 21.5$ گیگابایت می‌رسد. با توجه به مدل‌های جدید مانند \lr{GPT-5} با ۲M توکن زمینه، این مقدار به سرعت از حافظه \lr{GPU} فراتر می‌رود \cite{kwon2023efficient}. بهینه‌سازی این حافظه نهان یکی از فعال‌ترین حوزه‌های تحقیقاتی است.
+
+\section{ساختار پروژه}
+در \Cref{chap:methods} مبانی ریاضی مکانیزم توجه و حافظه نهان KV بررسی می‌شوند و الگوریتم‌های بهینه‌سازی ارائه می‌گردند. در \Cref{chap:implementation} پیاده‌سازی الگوریتم‌ها، فلوچارت و نتایج تحلیلی نشان داده می‌شود. در \Cref{chap:tables} فرمول‌های تحلیلی و جداول مقایسه ارائه می‌شوند.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  node distance=2cm,
+  every node/.style={draw, rounded corners, minimum width=3cm, minimum height=0.8cm, align=center, font=\small},
+  link/.style={-latex, thick, blue}
+]
+\node (intro) [fill=blue!20] {مقدمه};
+\node (methods) [below of=intro, fill=green!20] {مبانی ریاضی و الگوریتم‌ها};
+\node (impl) [right of=methods, xshift=3.5cm, fill=orange!20] {\hyperref[chap:implementation]{\textbf{پیاده‌سازی و تحلیل}}};
+\node (tables) [left of=methods, xshift=-3.5cm, fill=red!20] {\hyperref[chap:tables]{\textbf{فرمول‌ها و جداول}}};
+
+\draw[link] (intro.south) -- (methods.north);
+\draw[link] (methods.east) -- (impl.west);
+\draw[link] (methods.west) -- (tables.east);
+\draw[link, bend left=30] (intro.east) to node [above, draw=none, font=\small] {} (impl.north);
+\draw[link, bend right=30] (intro.west) to node [above, draw=none, font=\small] {} (tables.north);
+
+\end{tikzpicture}
+\caption{گراف ارتباطی ساختار پروژه. با کلیک روی هر نود می‌توان به بخش مربوطه رفت.}
+\label{fig:graph}
+\end{figure}
