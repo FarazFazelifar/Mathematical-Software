@@ -164,6 +164,57 @@ fig.savefig('box_plot.png', dpi=150)
 plt.close()
 print("-> box_plot.png saved")
 
+# ب) افزودن داده جدید و آپدیت نمودارها
+print("\\n" + "=" * 50)
+print("بخش ۲ب: افزودن داده جدید (700KB) و آپدیت خودکار")
+print("=" * 50)
+
+# ایجاد یک کپی با سطر جدید
+df2 = pd.concat([df, pd.DataFrame({
+    size_col: ['700KB'],
+    a1: [80],
+    a2: [320],
+    a3: [700],
+})], ignore_index=True)
+
+print(f"\\nداده‌های آپدیت‌شده ({len(df2)} سطر):")
+print(df2.to_string(index=False))
+
+# آپدیت میله‌ای
+fig, ax = plt.subplots(figsize=(10, 6))
+x_pos2 = np.arange(len(df2))
+ax.bar(x_pos2 - w, df2[a1], w, label='Alg.1', color='#4CAF50')
+ax.bar(x_pos2, df2[a2], w, label='Alg.2', color='#2196F3')
+ax.bar(x_pos2 + w, df2[a3], w, label='Alg.3', color='#FF9800')
+ax.set_xlabel('Data Size')
+ax.set_ylabel('Runtime (ms)')
+ax.set_title('Bar Chart (Updated with 700KB)')
+ax.set_xticks(x_pos2)
+ax.set_xticklabels(df2[size_col], rotation=45)
+ax.legend()
+ax.grid(True, alpha=0.3, axis='y')
+fig.tight_layout()
+fig.savefig('bar_plot_updated.png', dpi=150)
+plt.close()
+print("-> bar_plot_updated.png saved")
+
+# آپدیت خطی
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(df2[size_col], df2[a1], 'o-', color='#4CAF50', lw=2, ms=8, label='Alg.1')
+ax.plot(df2[size_col], df2[a2], 's-', color='#2196F3', lw=2, ms=8, label='Alg.2')
+ax.plot(df2[size_col], df2[a3], '^-', color='#FF9800', lw=2, ms=8, label='Alg.3')
+ax.set_xlabel('Data Size')
+ax.set_ylabel('Runtime (ms)')
+ax.set_title('Line Chart (Updated with 700KB)')
+ax.legend()
+ax.grid(True, alpha=0.3)
+ax.set_xticks(range(len(df2)))
+ax.set_xticklabels(df2[size_col], rotation=45)
+fig.tight_layout()
+fig.savefig('line_plot_updated.png', dpi=150)
+plt.close()
+print("-> line_plot_updated.png saved")
+
 # ج) میانگین الگوریتم ۲
 alg2_vals = df[a2].values
 alg2_mean = np.mean(alg2_vals)

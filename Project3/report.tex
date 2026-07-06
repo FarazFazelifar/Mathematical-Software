@@ -12,7 +12,14 @@
 \usepackage{subcaption}
 
 \usepackage{xepersian}
-\settextfont{DejaVu Sans}
+\settextfont[Scale=1.1]{Vazirmatn}
+\setlatintextfont{Times New Roman}
+\setdigitfont[Scale=1.1]{Vazirmatn}
+
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{2.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{2ex plus 1ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1.5ex plus 1ex minus .2ex}{.8ex plus .2ex}
 
 \lstset{
   language=Python,
@@ -80,7 +87,7 @@ def lagrange_interp(x, xn, yn):
 \end{lstlisting}
 \end{latin}
 
-ضرایب چندجمله‌ای (با \lr{np.polyfit}) به دست آمد:
+ضرایب چندجمله‌ای (\lr{np.polyfit}) به دست آمد:
 $$
 P(x) = 0.175x^5 - 2.9583x^4 + 18.375x^3 - 52.0417x^2 + 68.45x - 31
 $$
@@ -158,7 +165,7 @@ a1, a2, a3 = df.columns[1], df.columns[2], df.columns[3]
   \caption{نمودار میله‌ای}
 \end{figure}
 
-\lr{Alg.1} سریع‌ترین الگوریتم است و رشد خیلی ملایمی دارد (از ۵۰ تا ۷۵ میلی‌ثانیه). \lr{Alg.2} زمان متوسطی دارد ولی رشدش یکنواخت و خطی است. \lr{Alg.3} بدترین وضعیت را دارد و از ۱۰۰ به ۶۰۰ میلی‌ثانیه می‌رسد که نشان‌دهنده پیچیدگی بالاتر است.
+\lr{(\lr{Alg.1})} سریع‌ترین الگوریتم است و رشد خیلی ملایمی دارد (از ۵۰ تا ۷۵ میلی‌ثانیه). \lr{(\lr{Alg.2})} زمان متوسطی دارد و رشدش یکنواخت و خطی است (از ۲۰۰ تا ۳۰۰). \lr{(\lr{Alg.3})} بیشترین رشد را دارد و زمانش از ۱۰۰ تا ۶۰۰ میلی‌ثانیه می‌رسد.
 
 \subsubsection{نمودار خطی}
 \begin{figure}[H]
@@ -167,7 +174,7 @@ a1, a2, a3 = df.columns[1], df.columns[2], df.columns[3]
   \caption{نمودار خطی}
 \end{figure}
 
-هر سه الگوریتم رفتار خطی دارند ولی شیب‌شان خیلی فرق می‌کند. \lr{Alg.3} شیب تقریباً ۱ دارد (یعنی با دوبرابر شدن داده، زمان هم تقریباً دوبرابر می‌شود). \lr{Alg.1} شیب خیلی کم دارد و عملاً تفاوت چندانی با افزایش داده نمی‌کند.
+هر سه الگوریتم رفتار خطی دارند ولی شیب‌شان متفاوت است. \lr{(\lr{Alg.3})} بیشترین شیب را دارد و با افزایش داده خیلی سریع رشد می‌کند. \lr{(\lr{Alg.2})} شیب متوسط و یکنواخت دارد (یعنی با دوبرابر شدن داده، زمان حدود ۴۰٪ افزایش می‌یابد). \lr{(\lr{Alg.1})} شیب خیلی کمی دارد و عملاً با افزایش داده رشد نمی‌کند.
 
 \subsubsection{نمودار جعبه‌ای}
 \begin{figure}[H]
@@ -176,12 +183,12 @@ a1, a2, a3 = df.columns[1], df.columns[2], df.columns[3]
   \caption{نمودار جعبه‌ای}
 \end{figure}
 
-\lr{Alg.1} کمترین پراکندگی (IQR کوچک) و \lr{Alg.3} بیشترین پراکندگی را دارد. هیچ داده پرتی (\lr{outlier}) مشاهده نمی‌شود.
+\lr{(\lr{Alg.1})} کمترین پراکندگی \lr{(\lr{IQR} \rl{کوچک})} و \lr{(\lr{Alg.3})} بیشترین پراکندگی را دارد. هیچ داده پرتی \lr{(\lr{outlier})} مشاهده نمی‌شود.
 
 
 \subsection{ب) افزودن داده جدید}
 
-یک سطر جدید (700KB با مقادیر 80, 320, 700) به فایل اکسل اضافه شد. بعد کد \textbf{بدون هیچ تغییری} دوباره اجرا شد و نمودارها به صورت خودکار آپدیت شدند:
+یک سطر جدید \lr{(700KB \rl{با مقادیر 80, 320, 700})} به فایل اکسل اضافه شد. بعد کد \textbf{بدون هیچ تغییری} دوباره اجرا شد و نمودارها به صورت خودکار آپدیت شدند:
 
 \begin{figure}[H]
   \centering
