@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-پروژه سوم نرم‌افزار ریاضی
-40213427
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -235,7 +229,7 @@ print(f"مقدار دقیق: e - 1 = {exact:.15f}")
 
 # الف) روش سیمپسون ترکیبی
 def simpson(f, a, b, n):
-    """n باید زوج باشد"""
+    # n باید زوج باشد
     if n % 2 != 0:
         n += 1
     h = (b - a) / n
@@ -243,7 +237,7 @@ def simpson(f, a, b, n):
     fx = f(x)
     return (h / 3) * (fx[0] + fx[-1] + 4*np.sum(fx[1:-1:2]) + 2*np.sum(fx[2:-2:2]))
 
-# الف) روش ذوزنقه‌ای ترکیبی
+# روش ذوزنقه‌ای ترکیبی
 def trapezoidal(f, a, b, n):
     h = (b - a) / n
     x = np.linspace(a, b, n + 1)
